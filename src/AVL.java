@@ -1,4 +1,6 @@
 import java.lang.Math;
+import java.util.NoSuchElementException;
+
 /**
  * Your implementation of the AVL tree rotations.
  */
@@ -7,6 +9,8 @@ public class AVL<T extends Comparable<? super T>> {
     /**
      * DO NOT ADD ANY GLOBAL VARIABLES!
      */
+    private AVLNode<T> root;
+    private int size;
 
     /**
      * Updates the height and balance factor of a node using its
@@ -28,7 +32,7 @@ public class AVL<T extends Comparable<? super T>> {
      *
      * @param currentNode The node to update the height and balance factor of.
      */
-    public void updateHeightAndBF(AVLNode<T> currentNode) {
+    private void updateHeightAndBF(AVLNode<T> currentNode) {
         // WRITE YOUR CODE HERE (DO NOT MODIFY METHOD HEADER)!
         int leftHeight;
         int rightHeight;
@@ -67,7 +71,7 @@ public class AVL<T extends Comparable<? super T>> {
      * @param currentNode The current node under inspection that will rotate.
      * @return The parent of the node passed in (after the rotation).
      */
-    public AVLNode<T> rotateLeft(AVLNode<T> currentNode) {
+    private AVLNode<T> rotateLeft(AVLNode<T> currentNode) {
         // WRITE YOUR CODE HERE (DO NOT MODIFY METHOD HEADER)!
         AVLNode<T> temp = currentNode.getRight();
         currentNode.setRight(temp.getLeft());
@@ -98,7 +102,7 @@ public class AVL<T extends Comparable<? super T>> {
      * @param currentNode The current node under inspection that will rotate.
      * @return The parent of the node passed in (after the rotation).
      */
-    public AVLNode<T> rotateRight(AVLNode<T> currentNode) {
+    private AVLNode<T> rotateRight(AVLNode<T> currentNode) {
         // WRITE YOUR CODE HERE (DO NOT MODIFY METHOD HEADER)!
         AVLNode<T> temp = currentNode.getLeft();
         currentNode.setLeft(temp.getRight());
@@ -128,7 +132,7 @@ public class AVL<T extends Comparable<? super T>> {
      * @param cur The current node under inspection.
      * @return The AVLNode that the caller should return.
      */
-    public AVLNode<T> balance(AVLNode<T> currentNode) {
+    private AVLNode<T> balance(AVLNode<T> currentNode) {
         // WRITE YOUR CODE HERE (DO NOT MODIFY METHOD HEADER)!
 
         /* First, we update the height and balance factor of the current node. */
@@ -148,4 +152,186 @@ public class AVL<T extends Comparable<? super T>> {
 
         return currentNode;
     }
+
+    /**
+     * Adds the element to the tree.
+     *
+     * Start by adding it as a leaf like in a regular BST and then rotate the
+     * tree as necessary.
+     *
+     * If the data is already in the tree, then nothing should be done (the
+     * duplicate shouldn't get added, and size should not be incremented).
+     *
+     * Remember to recalculate heights and balance factors while going back
+     * up the tree after adding the element, making sure to rebalance if
+     * necessary. This is as simple as calling the balance() method on the
+     * current node, before returning it (assuming that your balance method
+     * is written correctly from part 1 of this assignment).
+     *
+     * @param data The data to add.
+     * @throws java.lang.IllegalArgumentException If data is null.
+     */
+    public void add(T data) {
+        // WRITE YOUR CODE HERE (DO NOT MODIFY METHOD HEADER)!
+        if (data == null){
+            throw new IllegalArgumentException();
+        }
+        this.root = addRecursion(this.root, data);
+        this.size++;
+    }
+    private AVLNode<T> addRecursion(AVLNode<T> current, T data){
+        if (current == null){
+            return new AVLNode<T>(data);
+        }
+        if (current.getData().compareTo(data) <= -1){
+            current.setRight(addRecursion(current.getRight(), data));
+        }
+        if (current.getData().compareTo(data) >= 1){
+            current.setLeft(addRecursion(current.getLeft(), data));
+        }
+        int height = 0;
+        int balanceFactor = 0;
+        if (current.getLeft() == null){
+            height = current.getRight().getHeight() + 1;
+            balanceFactor = -1 - current.getRight().getHeight();
+        } else if (current.getRight() == null){
+            height = current.getLeft().getHeight() + 1;
+            balanceFactor = current.getLeft().getHeight() + 1;
+        } else {
+            height = Math.max(current.getLeft().getHeight(), current.getRight().getHeight()) + 1;
+            balanceFactor = current.getLeft().getHeight() - current.getRight().getHeight();
+        }
+        current.setHeight(height);
+        current.setBalanceFactor(balanceFactor);
+        if (Math.abs(current.getBalanceFactor()) > 1){
+            current = balance(current);
+        }
+        return current;
+    }
+
+    /**
+     * Removes and returns the element from the tree matching the given
+     * parameter.
+     *
+     * There are 3 cases to consider:
+     * 1: The node containing the data is a leaf (no children). In this case,
+     *    simply remove it.
+     * 2: The node containing the data has one child. In this case, simply
+     *    replace it with its child.
+     * 3: The node containing the data has 2 children. Use the successor to
+     *    replace the data, NOT predecessor. As a reminder, rotations can occur
+     *    after removing the successor node.
+     *
+     * Remember to recalculate heights and balance factors while going back
+     * up the tree after removing the element, making sure to rebalance if
+     * necessary. This is as simple as calling the balance() method on the
+     * current node, before returning it (assuming that your balance method
+     * is written correctly from part 1 of this assignment).
+     *
+     * Do NOT return the same data that was passed in. Return the data that
+     * was stored in the tree.
+     *
+     * Hint: Should you use value equality or reference equality?
+     *
+     * @param data The data to remove.
+     * @return The data that was removed.
+     * @throws java.lang.IllegalArgumentException If the data is null.
+     * @throws java.util.NoSuchElementException   If the data is not found.
+     */
+    public T remove(T data) {
+        if (data == null){
+            throw new IllegalArgumentException();
+        }
+        AVLNode<T> dummy = new AVLNode<>(data);
+        this.root = removeRecursion(this.root, data, dummy);
+        if (dummy.getData() == null){
+            throw new NoSuchElementException();
+        }
+        this.size--;
+        return dummy.getData();
+    }
+
+    private AVLNode<T> removeRecursion(AVLNode<T> current, T data, AVLNode<T> dummy){
+        if (current == null){
+            dummy.setData(null);
+            return current;
+        }
+        if (current.getData().compareTo(data) <= -1) {
+            current.setRight(removeRecursion(current.getRight(), data, dummy));
+        } else if (current.getData().compareTo(data) >= 1){
+            current.setLeft(removeRecursion(current.getLeft(), data, dummy));
+        } else {
+            dummy.setData(current.getData());
+            if (current.getLeft() == null && current.getRight() == null){
+                return null;
+            } else if (current.getRight() == null){
+                current = current.getLeft();
+                //current.setLeft(current.getLeft());
+            } else {
+                AVLNode<T> dummy2 = new AVLNode<>(data);
+                current.setRight(removeSuccessor(current.getRight(), dummy2));
+                current.setData(dummy2.getData());
+            }
+        }
+        int height = 0;
+        int balanceFactor = 0;
+        if (current.getLeft() == null && current.getRight() != null){
+            height = current.getRight().getHeight() + 1;
+            balanceFactor = -1 - current.getRight().getHeight();
+        } else if (current.getRight() == null && current.getLeft() != null){
+            height = current.getLeft().getHeight() + 1;
+            balanceFactor = current.getLeft().getHeight() + 1;
+        } else if(current.getLeft() != null && current.getData() != null) {
+            height = Math.max(current.getLeft().getHeight(), current.getRight().getHeight()) + 1;
+            balanceFactor = current.getLeft().getHeight() - current.getRight().getHeight();
+        }
+        current.setHeight(height);
+        current.setBalanceFactor(balanceFactor);
+        if (Math.abs(balanceFactor) > 1){
+            current = balance(current);
+        }
+        return current;
+    }
+
+    private AVLNode<T> removeSuccessor(AVLNode<T> curr, AVLNode<T> dummy){
+        if (curr.getLeft() != null){
+            curr.setLeft(removeSuccessor(curr.getLeft(), dummy));
+        } else {
+            dummy.setData(curr.getData());
+            return curr.getRight();
+        }
+        return curr;
+    }
+
+
+
+
+
+    /**
+     * Returns the root of the tree.
+     *
+     * For grading purposes only. You shouldn't need to use this method since
+     * you have direct access to the variable.
+     *
+     * @return The root of the tree.
+     */
+    public AVLNode<T> getRoot() {
+        // DO NOT MODIFY THIS METHOD!
+        return root;
+    }
+
+    /**
+     * Returns the size of the tree.
+     *
+     * For grading purposes only. You shouldn't need to use this method since
+     * you have direct access to the variable.
+     *
+     * @return The size of the tree.
+     */
+    public int size() {
+        // DO NOT MODIFY THIS METHOD!
+        return size;
+    }
+
+
 }
